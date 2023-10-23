@@ -56,15 +56,31 @@ void TrafficLight::simulate()
 // virtual function which is executed in a thread
 void TrafficLight::cycleThroughPhases()
 {
-    lastUpdate = std::chrono::system_clock::now();
+    // create a random number generator which
+    // generates an integer between 4000 and 6000 milliseconds
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    std::uniform_int_distribution<> distr(4000,6000);
+
+    auto lastUpdate = std::chrono::system_clock::now();
+    long time_to_wait = distr(generator);
     while (true)
     {
         // sleep at every iteration to reduce CPU usage
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        // compute time difference to stop watch
+        long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
 
+        if (timeSinceLastUpdate > time_to_wait) {
+            if (_currentPhase == TrafficLightPhase::green) {
+                _messages.send(std::move(TrafficLightPhase::red));
+                _currentPhase = TrafficLightPhase::red;
+            } else {
+                _messages.send(std::move(TrafficLightPhase::green));
+                _currentPhase = TrafficLightPhase::green;
+            }
+            lastUpdate = std::chrono::system_clock::now();
+            time_to_wait = distr(generator);
+        }
     }
-    // FP.2a : Implement the function with an infinite loop that measures the time between two loop cycles 
-    // and toggles the current phase of the traffic light between red and green and sends an update method 
-    // to the message queue using move semantics. The cycle duration should be a random value between 4 and 6 seconds. 
-    // Also, the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles. 
 }
